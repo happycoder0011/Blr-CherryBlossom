@@ -1,10 +1,16 @@
 // ===== Upload & Drag-Drop Module =====
 const Upload = (() => {
-  let dropOverlay, loading, fileInput;
+  let dropOverlay, loading, loadingText, fileInput;
+
+  // Timeout durations
+  const UPLOAD_TIMEOUT = 30000;   // 30s for image upload
+  const LOCATE_TIMEOUT = 40000;   // 40s (Claude + geocode)
+  const GEOCODE_TIMEOUT = 10000;  // 10s for reverse geocode
 
   function init() {
     dropOverlay = document.getElementById('drop-overlay');
     loading = document.getElementById('loading');
+    loadingText = loading.querySelector('p');
     fileInput = document.getElementById('file-input');
 
     setupDragDrop();
@@ -39,9 +45,11 @@ const Upload = (() => {
       dropOverlay.classList.add('hidden');
 
       const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-      if (files.length > 0) {
-        processFiles(files);
+      if (files.length === 0) {
+        showToast('Please drop an image file (JPG, PNG, etc.)');
+        return;
       }
+      processFiles(files);
     });
   }
 
@@ -64,7 +72,13 @@ const Upload = (() => {
   }
 
   async function processFile(file) {
-    showLoading(true);
+    // Validate file size client-side
+    if (file.size > 15 * 1024 * 1024) {
+      showToast('Image too large — please use a photo under 15MB.');
+      return;
+    }
+
+    showLoading(true, 'Reading image...');
 
     try {
       // Try EXIF GPS first
@@ -72,22 +86,37 @@ const Upload = (() => {
       let alreadyUploaded = false;
 
       if (!location) {
-        // Fallback: ask Claude Vision (this also uploads the image to R2)
+        showLoading(true, 'Asking AI for location...');
         location = await askClaudeForLocation(file);
         if (location) alreadyUploaded = true;
       }
 
-      if (location) {
-        // Upload image + save drop (or just save if already uploaded via /api/locate)
-        const drop = await saveDrop(file, location, alreadyUploaded);
-        if (drop) {
-          App.addDrop(drop);
+      if (!location) {
+        showToast('Could not determine location. Please try a different photo.');
+        return;
+      }
+
+      showLoading(true, 'Planting blossom...');
+      const drop = await saveDrop(file, location, alreadyUploaded);
+
+      if (drop && !drop.error) {
+        App.addDrop(drop);
+        if (drop._unsaved) {
+          showToast(`Blossom planted at ${drop.locationName}! (may not persist — storage hiccup)`);
+        } else {
           showToast(`Blossom planted at ${drop.locationName}!`);
         }
+      } else {
+        const msg = drop?.error || 'Upload failed. Please try again.';
+        showToast(msg);
       }
     } catch (err) {
       console.error('Error processing file:', err);
-      showToast('Oops! Could not process this image.');
+      if (err.name === 'AbortError') {
+        showToast('Request timed out. Please check your connection and try again.');
+      } else {
+        showToast('Something went wrong. Please try again.');
+      }
     } finally {
       showLoading(false);
     }
@@ -97,6 +126,7 @@ const Upload = (() => {
     try {
       const gps = await exifr.gps(file);
       if (gps && gps.latitude && gps.longitude) {
+        showLoading(true, 'Found GPS, looking up area...');
         const name = await reverseGeocode(gps.latitude, gps.longitude);
         return {
           lat: gps.latitude,
@@ -105,21 +135,25 @@ const Upload = (() => {
         };
       }
     } catch (err) {
-      console.log('No EXIF GPS data found');
+      // EXIF parsing failed — not a problem, we'll try Claude
+      console.log('EXIF extraction skipped:', err.message || 'no GPS data');
     }
     return null;
   }
 
   async function reverseGeocode(lat, lng) {
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=16`,
-        { headers: { 'User-Agent': 'BLRCherryBlossom/1.0' } }
+        { headers: { 'User-Agent': 'BLRCherryBlossom/1.0' } },
+        GEOCODE_TIMEOUT
       );
+      if (!res.ok) return 'Bangalore';
       const data = await res.json();
       const addr = data.address;
       return addr.suburb || addr.neighbourhood || addr.city_district || addr.city || 'Bangalore';
-    } catch {
+    } catch (err) {
+      console.warn('Reverse geocode failed:', err.message);
       return 'Bangalore';
     }
   }
@@ -129,21 +163,56 @@ const Upload = (() => {
     formData.append('image', file);
 
     try {
-      const res = await fetch('/api/locate', {
-        method: 'POST',
-        body: formData
-      });
+      const res = await fetchWithTimeout(
+        '/api/locate',
+        { method: 'POST', body: formData },
+        LOCATE_TIMEOUT
+      );
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        console.error('Locate API error:', res.status, errData);
+        if (res.status === 413) {
+          showToast('Image too large for AI analysis. Please use a smaller photo.');
+        } else if (res.status === 503) {
+          showToast('AI service temporarily busy. Trying with a random Bangalore location...');
+        }
+        // For 503/5xx, the server still returns a fallback location
+        if (errData.lat) {
+          return {
+            lat: errData.lat,
+            lng: errData.lng,
+            locationName: errData.locationName || 'Bangalore',
+            imagePath: errData.imagePath
+          };
+        }
+        return null;
+      }
+
       const data = await res.json();
+
+      // Show appropriate toast if Claude had issues
+      if (data._claudeError === 'timeout') {
+        showToast('AI took too long — placed near Bangalore center.');
+      } else if (data._claudeError === 'rate_limited') {
+        showToast('AI is busy — placed at an approximate location.');
+      }
+
       if (data.lat && data.lng) {
         return {
           lat: data.lat,
           lng: data.lng,
           locationName: data.locationName || 'Bangalore',
-          imagePath: data.imagePath // Image already in R2
+          imagePath: data.imagePath
         };
       }
     } catch (err) {
-      console.error('Claude location API error:', err);
+      if (err.name === 'AbortError') {
+        showToast('Location detection timed out. Please try again.');
+      } else {
+        console.error('Locate API network error:', err);
+        showToast('Network error — please check your connection.');
+      }
     }
     return null;
   }
@@ -154,30 +223,55 @@ const Upload = (() => {
     formData.append('lng', location.lng);
     formData.append('locationName', location.locationName);
     formData.append('twitterHandle', '');
+    formData.append('visitorId', App.getVisitorId());
 
     if (alreadyUploaded && location.imagePath) {
-      // Image already in R2 from /api/locate — just pass the path
       formData.append('existingImagePath', location.imagePath);
     }
-
-    // Always send the image file — /api/upload needs it for EXIF-path drops
-    // For AI-path, it's already in R2 but we send it again for simplicity
     formData.append('image', file);
 
     try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      return await res.json();
+      const res = await fetchWithTimeout(
+        '/api/upload',
+        { method: 'POST', body: formData },
+        UPLOAD_TIMEOUT
+      );
+
+      const data = await res.json();
+
+      // 207 = partial success (image saved, KV write failed)
+      if (res.status === 207) {
+        data._unsaved = true;
+      }
+
+      if (!res.ok && res.status !== 207) {
+        return { error: data.error || 'Upload failed. Please try again.' };
+      }
+
+      return data;
     } catch (err) {
+      if (err.name === 'AbortError') {
+        return { error: 'Upload timed out. Please try again on a better connection.' };
+      }
       console.error('Upload error:', err);
-      return null;
+      return { error: 'Network error — could not save your blossom.' };
     }
   }
 
-  function showLoading(show) {
+  // Fetch with AbortController timeout
+  function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    return fetch(url, { ...options, signal: controller.signal })
+      .finally(() => clearTimeout(timeoutId));
+  }
+
+  function showLoading(show, text) {
     loading.classList.toggle('hidden', !show);
+    if (text && loadingText) {
+      loadingText.textContent = text;
+    }
   }
 
   function showToast(message) {
@@ -186,7 +280,7 @@ const Upload = (() => {
     toast.className = 'toast';
     toast.textContent = message;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => toast.remove(), 3500);
   }
 
   return { init, showToast };

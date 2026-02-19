@@ -129,6 +129,208 @@ html, body {
   transform: scale(0.95);
 }
 
+/* ===== My Blossoms Button ===== */
+#my-blossoms-btn {
+  position: fixed;
+  bottom: 32px;
+  left: 32px;
+  z-index: 1000;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(244, 114, 182, 0.25);
+  background: rgba(40, 20, 30, 0.9);
+  backdrop-filter: blur(8px);
+  color: var(--pink-300);
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#my-blossoms-btn:hover {
+  background: rgba(60, 30, 45, 0.95);
+  color: var(--pink-200);
+  border-color: rgba(244, 114, 182, 0.4);
+}
+
+#my-blossoms-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pink-500);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+}
+
+#my-blossoms-badge.hidden {
+  display: none;
+}
+
+/* ===== My Blossoms Panel ===== */
+#my-blossoms-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 3500;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  transition: opacity 0.3s ease;
+}
+
+#my-blossoms-panel.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.my-blossoms-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 10, 18, 0.7);
+  backdrop-filter: blur(6px);
+}
+
+.my-blossoms-content {
+  position: relative;
+  z-index: 1;
+  background: rgba(35, 18, 26, 0.97);
+  border: 1px solid rgba(244, 114, 182, 0.15);
+  border-radius: 20px 20px 0 0;
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-left: 16px;
+  margin-bottom: 0;
+  border-bottom: none;
+  border-bottom-left-radius: 0;
+}
+
+.my-blossoms-content h3 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  color: var(--pink-200);
+  margin-bottom: 16px;
+}
+
+.my-blossoms-count {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--pink-500);
+}
+
+.my-blossoms-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: var(--pink-400);
+  font-size: 28px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+#my-blossoms-empty {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+#my-blossoms-empty p {
+  color: var(--pink-500);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+#my-blossoms-empty p:first-child {
+  color: var(--pink-400);
+  margin-bottom: 4px;
+}
+
+/* Individual blossom items */
+.my-blossom-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 12px;
+  transition: background 0.2s;
+  margin-bottom: 4px;
+}
+
+.my-blossom-item:hover {
+  background: rgba(244, 114, 182, 0.06);
+}
+
+.my-blossom-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.my-blossom-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.my-blossom-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.my-blossom-loc {
+  font-size: 14px;
+  color: var(--pink-200);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.my-blossom-date {
+  font-size: 12px;
+  color: var(--pink-500);
+  margin-top: 2px;
+}
+
+.my-blossom-locate {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(244, 114, 182, 0.15);
+  background: rgba(244, 114, 182, 0.06);
+  color: var(--pink-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.my-blossom-locate:hover {
+  background: rgba(244, 114, 182, 0.15);
+  color: var(--pink-300);
+}
+
 /* ===== Drag Overlay ===== */
 #drop-overlay {
   position: fixed;
@@ -821,6 +1023,20 @@ html, body {
     -webkit-tap-highlight-color: transparent;
   }
 
+  #my-blossoms-btn {
+    bottom: 20px;
+    left: 20px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .my-blossoms-content {
+    max-width: 100%;
+    margin-left: 0;
+    border-radius: 20px 20px 0 0;
+    max-height: 75vh;
+  }
+
   /* Welcome modal */
   .welcome-content {
     padding: 28px 20px;
@@ -992,6 +1208,10 @@ html, body {
 /* ===== Safe area for notched phones ===== */
 @supports (padding: env(safe-area-inset-bottom)) {
   #upload-btn {
+    bottom: calc(20px + env(safe-area-inset-bottom));
+  }
+
+  #my-blossoms-btn {
     bottom: calc(20px + env(safe-area-inset-bottom));
   }
 

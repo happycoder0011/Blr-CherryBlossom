@@ -65,6 +65,26 @@
   </button>
   <input type="file" id="file-input" accept="image/*" style="display:none" multiple>
 
+  <!-- My Blossoms button -->
+  <button id="my-blossoms-btn" title="My blossoms">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span id="my-blossoms-badge" class="hidden">0</span>
+  </button>
+
+  <!-- My Blossoms panel -->
+  <div id="my-blossoms-panel" class="hidden">
+    <div class="my-blossoms-backdrop"></div>
+    <div class="my-blossoms-content">
+      <button class="my-blossoms-close">&times;</button>
+      <h3>My Blossoms <span class="my-blossoms-count">(<span id="my-blossoms-count">0</span> planted)</span></h3>
+      <div id="my-blossoms-empty" class="hidden">
+        <p>You haven't planted any blossoms yet.</p>
+        <p>Drop a photo to plant your first one!</p>
+      </div>
+      <div id="my-blossoms-list"></div>
+    </div>
+  </div>
+
   <!-- Gallery overlay -->
   <div id="gallery-overlay" class="hidden">
     <div class="gallery-backdrop"></div>
