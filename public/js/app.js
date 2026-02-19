@@ -102,8 +102,6 @@ const App = (() => {
     lastDrop = drop;
     const modal = document.getElementById('share-modal');
 
-    document.getElementById('share-location').textContent = `${drop.locationName}, Bangalore`;
-    document.getElementById('share-card-loc').textContent = drop.locationName;
     document.getElementById('share-card-img').style.backgroundImage = `url(${drop.imagePath})`;
 
     const saved = localStorage.getItem('blr-cherry-handle');
@@ -258,14 +256,18 @@ const App = (() => {
   }
 
   function getShareUrl(drop, handle) {
-    let text = `me: i should do something useful today\nalso me: *plants a pink trumpet blossom at ${drop.locationName}*\n\n`;
+    let text = `planted a pink trumpet tree on the map 🌸\n\n`;
     if (handle) {
       text += `— @${handle}\n\n`;
     }
-    text += `drop a photo, watch bangalore turn pink 🌸`;
+    text += `drop a photo, watch bangalore turn pink`;
+
+    // Share URL with image thumbnail via OG tags
+    const filename = drop.imagePath.split('/').pop();
+    const shareUrl = `${window.location.origin}/share?img=${encodeURIComponent(filename)}`;
 
     const encodedText = encodeURIComponent(text);
-    const encodedUrl = encodeURIComponent(window.location.origin);
+    const encodedUrl = encodeURIComponent(shareUrl);
     return `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
   }
 

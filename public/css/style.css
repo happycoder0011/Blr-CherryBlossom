@@ -741,12 +741,6 @@ html, body {
   margin-bottom: 4px;
 }
 
-.share-location {
-  font-size: 14px;
-  color: var(--pink-400);
-  margin-bottom: 20px;
-}
-
 /* Share card preview */
 .share-card {
   background: rgba(255, 255, 255, 0.05);
@@ -774,12 +768,6 @@ html, body {
   font-size: 16px;
   color: var(--pink-200);
   margin-bottom: 4px;
-}
-
-.share-card-loc {
-  font-size: 13px;
-  color: var(--pink-400);
-  margin-bottom: 6px;
 }
 
 .share-card-site {
