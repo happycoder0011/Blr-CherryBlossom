@@ -1,0 +1,15 @@
+{
+  "name": "blr-cherryblossom",
+  "version": "1.0.0",
+  "description": "Drop photos, bloom cherry blossoms across Bangalore",
+  "scripts": {
+    "dev": "npx wrangler pages dev public --kv=DROPS_KV --r2=IMAGES_R2 --port 3000",
+    "deploy": "npx wrangler pages deploy public --project-name blr-cherryblossom",
+    "setup:kv": "npx wrangler kv namespace create DROPS_KV",
+    "setup:r2": "npx wrangler r2 bucket create blr-cherryblossom-images",
+    "secret:api-key": "npx wrangler secret put ANTHROPIC_API_KEY --project-name blr-cherryblossom"
+  },
+  "devDependencies": {
+    "wrangler": "^3.100.0"
+  }
+}

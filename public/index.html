@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a0a12">
+  <title>BLR Cherry Blossom — Drop a photo, plant a blossom</title>
+  <meta name="description" content="Drop your Bangalore photos and watch cherry blossom trees bloom across the city map. A community art project.">
+
+  <!-- Open Graph / Twitter Card -->
+  <meta property="og:title" content="BLR Cherry Blossom">
+  <meta property="og:description" content="Drop a photo, plant a cherry blossom. Watch Bangalore bloom!">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="BLR Cherry Blossom">
+  <meta name="twitter:description" content="I planted a cherry blossom in Bangalore! Drop your photo and bloom the city.">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header id="header">
+    <div class="header-left">
+      <h1>BLR Cherry Blossom</h1>
+      <p class="subtitle">Drop a photo, plant a blossom</p>
+    </div>
+    <div class="header-right">
+      <div class="blossom-counter">
+        <span class="counter-icon">&#127800;</span>
+        <span id="drop-count">0</span>
+        <span class="counter-label">blossoms planted</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Map -->
+  <div id="map"></div>
+
+  <!-- Petal canvas (overlay for falling petals) -->
+  <canvas id="petal-canvas"></canvas>
+
+  <!-- Drag overlay -->
+  <div id="drop-overlay" class="hidden">
+    <div class="drop-content">
+      <div class="drop-icon">&#127800;</div>
+      <h2>Drop your photo here</h2>
+      <p>Plant a cherry blossom on the Bangalore map</p>
+    </div>
+  </div>
+
+  <!-- Upload button (mobile + alternative) -->
+  <button id="upload-btn" title="Upload a photo">
+    <span>+</span>
+  </button>
+  <input type="file" id="file-input" accept="image/*" style="display:none" multiple>
+
+  <!-- Gallery overlay -->
+  <div id="gallery-overlay" class="hidden">
+    <div class="gallery-backdrop"></div>
+    <div class="gallery-content">
+      <button class="gallery-close">&times;</button>
+      <h3 id="gallery-title">Photos from this spot</h3>
+      <div id="gallery-grid"></div>
+    </div>
+  </div>
+
+  <!-- Welcome modal -->
+  <div id="welcome-modal">
+    <div class="welcome-backdrop"></div>
+    <div class="welcome-content">
+      <div class="welcome-petals">&#127800; &#127801; &#127800;</div>
+      <h2>Welcome to BLR Cherry Blossom</h2>
+      <p>Drop your Bangalore photos to plant cherry blossom trees on the map. The more photos a neighborhood gets, the more it blooms!</p>
+      <div class="welcome-steps">
+        <div class="step">
+          <span class="step-num">1</span>
+          <span>Drag & drop a photo (or tap +)</span>
+        </div>
+        <div class="step">
+          <span class="step-num">2</span>
+          <span>We find the location automatically</span>
+        </div>
+        <div class="step">
+          <span class="step-num">3</span>
+          <span>Watch a cherry blossom bloom!</span>
+        </div>
+      </div>
+      <button id="welcome-start">Start Planting</button>
+    </div>
+  </div>
+
+  <!-- Share modal (after planting) -->
+  <div id="share-modal" class="hidden">
+    <div class="share-backdrop"></div>
+    <div class="share-content">
+      <button class="share-close">&times;</button>
+      <div class="share-celebration">&#127800;</div>
+      <h2>Blossom Planted!</h2>
+      <p class="share-location" id="share-location">Koramangala, Bangalore</p>
+
+      <!-- Share card preview -->
+      <div class="share-card" id="share-card">
+        <div class="share-card-img" id="share-card-img"></div>
+        <div class="share-card-info">
+          <div class="share-card-title">I planted a cherry blossom!</div>
+          <div class="share-card-loc" id="share-card-loc">Koramangala</div>
+          <div class="share-card-site">blrcherryblossom.com</div>
+        </div>
+      </div>
+
+      <!-- Twitter handle input -->
+      <div class="share-handle-row">
+        <label for="twitter-handle">Your X handle (optional)</label>
+        <div class="handle-input-wrap">
+          <span class="handle-at">@</span>
+          <input type="text" id="twitter-handle" placeholder="yourhandle" maxlength="30" autocomplete="off">
+        </div>
+      </div>
+
+      <!-- Share buttons -->
+      <div class="share-buttons">
+        <button id="share-twitter" class="share-btn share-btn-twitter">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          Share on X
+        </button>
+        <button id="share-skip" class="share-btn share-btn-skip">Maybe later</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading indicator -->
+  <div id="loading" class="hidden">
+    <div class="loading-spinner"></div>
+    <p>Finding location...</p>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+  <script src="/js/map.js"></script>
+  <script src="/js/petals.js"></script>
+  <script src="/js/gallery.js"></script>
+  <script src="/js/upload.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
