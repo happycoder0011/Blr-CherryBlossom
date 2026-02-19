@@ -1,69 +1,111 @@
-// ===== Photo Gallery Module =====
+// ===== Image Preview Module =====
 const Gallery = (() => {
-  let overlay, grid, title;
+  let activePopup = null;
 
-  function init() {
-    overlay = document.getElementById('gallery-overlay');
-    grid = document.getElementById('gallery-grid');
-    title = document.getElementById('gallery-title');
+  function init() {}
 
-    // Close on backdrop click
-    overlay.querySelector('.gallery-backdrop').addEventListener('click', hide);
-    overlay.querySelector('.gallery-close').addEventListener('click', hide);
-
-    // Close on Escape
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') hide();
-    });
-  }
-
-  function show(lat, lng) {
-    // Find all drops near this location
-    const threshold = 0.002; // ~200m radius
-    const nearby = App.getDrops().filter(d =>
+  function getNearbyDrops(lat, lng) {
+    const threshold = 0.002;
+    return App.getDrops().filter(d =>
       Math.abs(d.lat - lat) < threshold && Math.abs(d.lng - lng) < threshold
     );
+  }
 
-    if (nearby.length === 0) return;
+  function buildPopupContent(drops) {
+    if (drops.length === 1) {
+      return `<div class="hover-preview">
+        <img src="${drops[0].imagePath}" alt="">
+      </div>`;
+    }
 
-    const locationName = nearby[0].locationName || 'this spot';
-    title.textContent = `${nearby.length} photo${nearby.length > 1 ? 's' : ''} from ${locationName}`;
+    const shown = drops.slice(0, 6);
+    const extra = drops.length - shown.length;
+    let html = `<div class="hover-preview hover-preview-multi">`;
+    shown.forEach(d => {
+      html += `<img src="${d.imagePath}" alt="">`;
+    });
+    if (extra > 0) {
+      html += `<div class="hover-preview-more">+${extra}</div>`;
+    }
+    html += `</div>`;
+    return html;
+  }
 
-    grid.innerHTML = '';
-    nearby.forEach(drop => {
-      const item = document.createElement('div');
-      item.className = 'gallery-item';
+  function openFullImage(drops) {
+    // Remove existing lightbox if any
+    const existing = document.getElementById('lightbox-overlay');
+    if (existing) existing.remove();
 
-      const date = new Date(drop.timestamp);
-      const dateStr = date.toLocaleDateString('en-IN', {
-        day: 'numeric', month: 'short', year: 'numeric'
-      });
+    const overlay = document.createElement('div');
+    overlay.id = 'lightbox-overlay';
 
-      const handleHtml = drop.twitterHandle
-        ? `<div class="gallery-item-handle">@${drop.twitterHandle}</div>`
-        : '';
-
-      item.innerHTML = `
-        <img src="${drop.imagePath}" alt="Photo from ${drop.locationName}" loading="lazy">
-        <div class="gallery-item-overlay">
-          ${handleHtml}
-          <div class="gallery-item-date">${dateStr}</div>
+    if (drops.length === 1) {
+      overlay.innerHTML = `
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-body">
+          <button class="lightbox-close">&times;</button>
+          <img src="${drops[0].imagePath}" alt="">
         </div>
       `;
+    } else {
+      let imgs = drops.map(d => `<img src="${d.imagePath}" alt="">`).join('');
+      overlay.innerHTML = `
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-body lightbox-grid">
+          <button class="lightbox-close">&times;</button>
+          ${imgs}
+        </div>
+      `;
+    }
 
-      item.addEventListener('click', () => {
-        window.open(drop.imagePath, '_blank');
-      });
+    document.body.appendChild(overlay);
 
-      grid.appendChild(item);
+    const close = () => overlay.remove();
+    overlay.querySelector('.lightbox-backdrop').addEventListener('click', close);
+    overlay.querySelector('.lightbox-close').addEventListener('click', close);
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onKey); }
+    };
+    document.addEventListener('keydown', onKey);
+  }
+
+  function bindMarker(marker, drop) {
+    // Hover: show square thumbnail popup
+    marker.on('mouseover', () => {
+      const nearby = getNearbyDrops(drop.lat, drop.lng);
+      if (nearby.length === 0) return;
+
+      activePopup = L.popup({
+        closeButton: false,
+        className: 'hover-popup',
+        offset: [0, -40],
+        autoPan: false,
+        maxWidth: 300
+      })
+        .setLatLng([drop.lat, drop.lng])
+        .setContent(buildPopupContent(nearby))
+        .openOn(BlossomMap.getMap());
     });
 
-    overlay.classList.remove('hidden');
+    marker.on('mouseout', () => {
+      if (activePopup) {
+        BlossomMap.getMap().closePopup(activePopup);
+        activePopup = null;
+      }
+    });
+
+    // Click: open full image
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e);
+      if (activePopup) {
+        BlossomMap.getMap().closePopup(activePopup);
+        activePopup = null;
+      }
+      const nearby = getNearbyDrops(drop.lat, drop.lng);
+      if (nearby.length > 0) openFullImage(nearby);
+    });
   }
 
-  function hide() {
-    overlay.classList.add('hidden');
-  }
-
-  return { init, show, hide };
+  return { init, bindMarker };
 })();

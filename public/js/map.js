@@ -87,10 +87,8 @@ const BlossomMap = (() => {
     // Store drop data on marker
     marker.dropData = drop;
 
-    // Click handler for gallery
-    marker.on('click', () => {
-      Gallery.show(drop.lat, drop.lng);
-    });
+    // Hover for thumbnail, click for full image
+    Gallery.bindMarker(marker, drop);
 
     clusterGroup.addLayer(marker);
 
