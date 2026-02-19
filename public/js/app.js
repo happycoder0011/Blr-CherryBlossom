@@ -258,11 +258,11 @@ const App = (() => {
   }
 
   function getShareUrl(drop, handle) {
-    let text = `I just planted a cherry blossom at ${drop.locationName}, Bangalore! 🌸🌳\n\n`;
+    let text = `me: i should do something useful today\nalso me: *plants a pink trumpet blossom at ${drop.locationName}*\n\n`;
     if (handle) {
-      text += `Planted by @${handle}\n\n`;
+      text += `— @${handle}\n\n`;
     }
-    text += `Drop your photo and bloom the city →`;
+    text += `drop a photo, watch bangalore turn pink 🌸`;
 
     const encodedText = encodeURIComponent(text);
     const encodedUrl = encodeURIComponent(window.location.origin);

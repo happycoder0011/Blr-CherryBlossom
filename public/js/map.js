@@ -3,7 +3,7 @@ const BlossomMap = (() => {
   let map;
   let clusterGroup;
 
-  // Cherry blossom tree SVG for markers
+  // Pink trumpet blossom tree SVG for markers
   const treeSVG = (size = 40) => `
     <svg width="${size}" height="${size}" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
       <!-- Trunk -->

@@ -2,25 +2,10 @@ name = "blr-cherryblossom"
 compatibility_date = "2024-12-01"
 pages_build_output_dir = "public"
 
-# ============================================================
-# SETUP INSTRUCTIONS (run these once before deploying):
-#
-# 1. Create KV namespace:
-#    npx wrangler kv namespace create DROPS_KV
-#    → Copy the ID and paste below
-#
-# 2. Create R2 bucket:
-#    npx wrangler r2 bucket create blr-cherryblossom-images
-#
-# 3. Set API key secret:
-#    npx wrangler pages secret put ANTHROPIC_API_KEY --project-name blr-cherryblossom
-#
-# 4. Deploy:
-#    npm run deploy
-# ============================================================
+[[kv_namespaces]]
+binding = "DROPS_KV"
+id = "23f9d89f53c947ebb8fe9701a5e73aee"
 
-# NOTE: KV and R2 bindings for Pages are configured in the
-# Cloudflare Dashboard under:
-#   Pages → blr-cherryblossom → Settings → Functions → Bindings
-#
-# For local dev, bindings are passed via CLI flags (see npm run dev)
+[[r2_buckets]]
+binding = "IMAGES_R2"
+bucket_name = "blr-cherryblossom-images"

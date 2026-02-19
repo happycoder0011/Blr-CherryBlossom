@@ -4,7 +4,6 @@ const Upload = (() => {
 
   // Timeout durations
   const UPLOAD_TIMEOUT = 30000;   // 30s for image upload
-  const LOCATE_TIMEOUT = 40000;   // 40s (Claude + geocode)
   const GEOCODE_TIMEOUT = 10000;  // 10s for reverse geocode
 
   function init() {
@@ -81,23 +80,16 @@ const Upload = (() => {
     showLoading(true, 'Reading image...');
 
     try {
-      // Try EXIF GPS first
+      // Extract GPS from EXIF data
       let location = await extractEXIF(file);
-      let alreadyUploaded = false;
 
       if (!location) {
-        showLoading(true, 'Asking AI for location...');
-        location = await askClaudeForLocation(file);
-        if (location) alreadyUploaded = true;
-      }
-
-      if (!location) {
-        showToast('Could not determine location. Please try a different photo.');
+        showToast('No GPS data found. Please use a photo taken with location enabled.');
         return;
       }
 
       showLoading(true, 'Planting blossom...');
-      const drop = await saveDrop(file, location, alreadyUploaded);
+      const drop = await saveDrop(file, location);
 
       if (drop && !drop.error) {
         App.addDrop(drop);
@@ -135,7 +127,6 @@ const Upload = (() => {
         };
       }
     } catch (err) {
-      // EXIF parsing failed — not a problem, we'll try Claude
       console.log('EXIF extraction skipped:', err.message || 'no GPS data');
     }
     return null;
@@ -158,76 +149,13 @@ const Upload = (() => {
     }
   }
 
-  async function askClaudeForLocation(file) {
-    const formData = new FormData();
-    formData.append('image', file);
-
-    try {
-      const res = await fetchWithTimeout(
-        '/api/locate',
-        { method: 'POST', body: formData },
-        LOCATE_TIMEOUT
-      );
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        console.error('Locate API error:', res.status, errData);
-        if (res.status === 413) {
-          showToast('Image too large for AI analysis. Please use a smaller photo.');
-        } else if (res.status === 503) {
-          showToast('AI service temporarily busy. Trying with a random Bangalore location...');
-        }
-        // For 503/5xx, the server still returns a fallback location
-        if (errData.lat) {
-          return {
-            lat: errData.lat,
-            lng: errData.lng,
-            locationName: errData.locationName || 'Bangalore',
-            imagePath: errData.imagePath
-          };
-        }
-        return null;
-      }
-
-      const data = await res.json();
-
-      // Show appropriate toast if Claude had issues
-      if (data._claudeError === 'timeout') {
-        showToast('AI took too long — placed near Bangalore center.');
-      } else if (data._claudeError === 'rate_limited') {
-        showToast('AI is busy — placed at an approximate location.');
-      }
-
-      if (data.lat && data.lng) {
-        return {
-          lat: data.lat,
-          lng: data.lng,
-          locationName: data.locationName || 'Bangalore',
-          imagePath: data.imagePath
-        };
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') {
-        showToast('Location detection timed out. Please try again.');
-      } else {
-        console.error('Locate API network error:', err);
-        showToast('Network error — please check your connection.');
-      }
-    }
-    return null;
-  }
-
-  async function saveDrop(file, location, alreadyUploaded) {
+  async function saveDrop(file, location) {
     const formData = new FormData();
     formData.append('lat', location.lat);
     formData.append('lng', location.lng);
     formData.append('locationName', location.locationName);
     formData.append('twitterHandle', '');
     formData.append('visitorId', App.getVisitorId());
-
-    if (alreadyUploaded && location.imagePath) {
-      formData.append('existingImagePath', location.imagePath);
-    }
     formData.append('image', file);
 
     try {

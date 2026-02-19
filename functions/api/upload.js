@@ -18,7 +18,6 @@ export async function onRequestPost(context) {
   const lng = parseFloat(formData.get('lng'));
   const locationName = formData.get('locationName') || 'Unknown';
   const twitterHandle = (formData.get('twitterHandle') || '').replace(/^@/, '').trim();
-  const existingImagePath = formData.get('existingImagePath');
   const visitorId = formData.get('visitorId') || '';
 
   // Validate coordinates
@@ -31,9 +30,7 @@ export async function onRequestPost(context) {
 
   let imagePath;
 
-  if (existingImagePath) {
-    imagePath = existingImagePath;
-  } else if (file && file.size > 0) {
+  if (file && file.size > 0) {
     // Validate file size (max 15MB)
     if (file.size > 15 * 1024 * 1024) {
       return Response.json(
