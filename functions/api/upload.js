@@ -20,7 +20,6 @@ export async function onRequestPost(context) {
   const twitterHandle = (formData.get('twitterHandle') || '').replace(/^@/, '').trim();
   const visitorId = formData.get('visitorId') || '';
 
-  // Validate coordinates
   if (isNaN(lat) || isNaN(lng)) {
     return Response.json(
       { error: 'Invalid location data. Please try again.' },
@@ -31,7 +30,6 @@ export async function onRequestPost(context) {
   let imagePath;
 
   if (file && file.size > 0) {
-    // Validate file size (max 15MB)
     if (file.size > 15 * 1024 * 1024) {
       return Response.json(
         { error: 'Image too large. Please use an image under 15MB.' },
@@ -42,7 +40,6 @@ export async function onRequestPost(context) {
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
 
-    // Upload to R2 with error handling
     try {
       const arrayBuffer = await file.arrayBuffer();
       await env.IMAGES_R2.put(filename, arrayBuffer, {
@@ -63,8 +60,9 @@ export async function onRequestPost(context) {
     );
   }
 
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const drop = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id,
     lat,
     lng,
     locationName,
@@ -74,30 +72,25 @@ export async function onRequestPost(context) {
     timestamp: new Date().toISOString()
   };
 
-  // Save to KV with retry
+  // Store as individual key — no read-modify-write, scales to 10k+
   try {
-    await kvPutWithRetry(env, drop);
+    await kvPutWithRetry(env, id, drop);
   } catch (kvErr) {
     console.error('KV write failed after retries:', kvErr);
-    // Drop was not saved but image was uploaded — still return the drop
-    // so the user sees it in their session (it just won't persist)
     drop._unsaved = true;
-    return Response.json(drop, { status: 207 }); // 207 Multi-Status: partial success
+    return Response.json(drop, { status: 207 });
   }
 
   return Response.json(drop);
 }
 
-async function kvPutWithRetry(env, drop, retries = 2) {
+async function kvPutWithRetry(env, id, drop, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const existing = (await env.DROPS_KV.get('drops', 'json')) || [];
-      existing.push(drop);
-      await env.DROPS_KV.put('drops', JSON.stringify(existing));
+      await env.DROPS_KV.put(`drop:${id}`, JSON.stringify(drop));
       return;
     } catch (err) {
       if (attempt === retries) throw err;
-      // Brief pause before retry
       await new Promise(r => setTimeout(r, 200 * (attempt + 1)));
     }
   }

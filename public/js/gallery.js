@@ -4,59 +4,25 @@ const Gallery = (() => {
 
   function init() {}
 
-  function getNearbyDrops(lat, lng) {
-    const threshold = 0.002;
-    return App.getDrops().filter(d =>
-      Math.abs(d.lat - lat) < threshold && Math.abs(d.lng - lng) < threshold
-    );
+  function buildPopupContent(drop) {
+    return `<div class="hover-preview">
+      <img src="${drop.imagePath}" alt="">
+    </div>`;
   }
 
-  function buildPopupContent(drops) {
-    if (drops.length === 1) {
-      return `<div class="hover-preview">
-        <img src="${drops[0].imagePath}" alt="">
-      </div>`;
-    }
-
-    const shown = drops.slice(0, 6);
-    const extra = drops.length - shown.length;
-    let html = `<div class="hover-preview hover-preview-multi">`;
-    shown.forEach(d => {
-      html += `<img src="${d.imagePath}" alt="">`;
-    });
-    if (extra > 0) {
-      html += `<div class="hover-preview-more">+${extra}</div>`;
-    }
-    html += `</div>`;
-    return html;
-  }
-
-  function openFullImage(drops) {
-    // Remove existing lightbox if any
+  function openFullImage(drop) {
     const existing = document.getElementById('lightbox-overlay');
     if (existing) existing.remove();
 
     const overlay = document.createElement('div');
     overlay.id = 'lightbox-overlay';
-
-    if (drops.length === 1) {
-      overlay.innerHTML = `
-        <div class="lightbox-backdrop"></div>
-        <div class="lightbox-body">
-          <button class="lightbox-close">&times;</button>
-          <img src="${drops[0].imagePath}" alt="">
-        </div>
-      `;
-    } else {
-      let imgs = drops.map(d => `<img src="${d.imagePath}" alt="">`).join('');
-      overlay.innerHTML = `
-        <div class="lightbox-backdrop"></div>
-        <div class="lightbox-body lightbox-grid">
-          <button class="lightbox-close">&times;</button>
-          ${imgs}
-        </div>
-      `;
-    }
+    overlay.innerHTML = `
+      <div class="lightbox-backdrop"></div>
+      <div class="lightbox-body">
+        <button class="lightbox-close">&times;</button>
+        <img src="${drop.imagePath}" alt="">
+      </div>
+    `;
 
     document.body.appendChild(overlay);
 
@@ -73,9 +39,6 @@ const Gallery = (() => {
   function bindMarker(marker, drop) {
     // Hover: show square thumbnail popup
     marker.on('mouseover', () => {
-      const nearby = getNearbyDrops(drop.lat, drop.lng);
-      if (nearby.length === 0) return;
-
       activePopup = L.popup({
         closeButton: false,
         className: 'hover-popup',
@@ -84,7 +47,7 @@ const Gallery = (() => {
         maxWidth: 300
       })
         .setLatLng([drop.lat, drop.lng])
-        .setContent(buildPopupContent(nearby))
+        .setContent(buildPopupContent(drop))
         .openOn(BlossomMap.getMap());
     });
 
@@ -102,8 +65,7 @@ const Gallery = (() => {
         BlossomMap.getMap().closePopup(activePopup);
         activePopup = null;
       }
-      const nearby = getNearbyDrops(drop.lat, drop.lng);
-      if (nearby.length > 0) openFullImage(nearby);
+      openFullImage(drop);
     });
   }
 

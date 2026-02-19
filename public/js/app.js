@@ -5,28 +5,19 @@ const App = (() => {
   let visitorId = '';
 
   async function init() {
-    // Initialize visitor identity
     visitorId = initVisitorId();
 
-    // Initialize modules
     BlossomMap.init();
     Petals.init();
     Gallery.init();
     Upload.init();
 
-    // Welcome modal
     setupWelcome();
-
-    // Share modal
     setupShare();
-
-    // My Blossoms panel
     setupMyBlossoms();
 
-    // Load existing drops
     await loadDrops();
 
-    // Start ambient petals after a moment
     setTimeout(() => Petals.ambient(8), 2000);
   }
 
@@ -34,16 +25,13 @@ const App = (() => {
   function initVisitorId() {
     let id = localStorage.getItem('blr-cherry-visitor');
     if (!id) {
-      // Generate a UUID-like ID
       id = 'v-' + crypto.randomUUID();
       localStorage.setItem('blr-cherry-visitor', id);
     }
     return id;
   }
 
-  function getVisitorId() {
-    return visitorId;
-  }
+  function getVisitorId() { return visitorId; }
 
   function getMyDrops() {
     return drops.filter(d => d.visitorId === visitorId);
@@ -82,9 +70,7 @@ const App = (() => {
 
     twitterBtn.addEventListener('click', () => {
       const handle = handleInput.value.trim().replace(/^@/, '');
-      if (handle) {
-        localStorage.setItem('blr-cherry-handle', handle);
-      }
+      if (handle) localStorage.setItem('blr-cherry-handle', handle);
 
       const url = getShareUrl(lastDrop, handle);
       window.open(url, '_blank', 'width=600,height=400');
@@ -101,16 +87,15 @@ const App = (() => {
   function showShareModal(drop) {
     lastDrop = drop;
     const modal = document.getElementById('share-modal');
-
     document.getElementById('share-card-img').style.backgroundImage = `url(${drop.imagePath})`;
-
     const saved = localStorage.getItem('blr-cherry-handle');
     if (saved) document.getElementById('twitter-handle').value = saved;
-
     modal.classList.remove('hidden');
   }
 
   // ===== My Blossoms =====
+  const MY_BLOSSOMS_LIMIT = 50;
+
   function setupMyBlossoms() {
     const btn = document.getElementById('my-blossoms-btn');
     const panel = document.getElementById('my-blossoms-panel');
@@ -149,10 +134,14 @@ const App = (() => {
     emptyState.classList.add('hidden');
     list.innerHTML = '';
 
-    // Show newest first
+    // Show newest first, capped to limit
     const sorted = [...myDrops].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const visible = sorted.slice(0, MY_BLOSSOMS_LIMIT);
 
-    sorted.forEach(drop => {
+    // Use DocumentFragment for batch DOM insertion
+    const frag = document.createDocumentFragment();
+
+    visible.forEach(drop => {
       const item = document.createElement('div');
       item.className = 'my-blossom-item';
 
@@ -177,20 +166,26 @@ const App = (() => {
         </button>
       `;
 
-      // Click thumbnail → open image
       item.querySelector('.my-blossom-thumb').addEventListener('click', () => {
         window.open(drop.imagePath, '_blank');
       });
 
-      // Click locate → fly to on map
       item.querySelector('.my-blossom-locate').addEventListener('click', () => {
         document.getElementById('my-blossoms-panel').classList.add('hidden');
-        const map = BlossomMap.getMap();
-        map.flyTo([drop.lat, drop.lng], 16, { duration: 1.5 });
+        BlossomMap.getMap().flyTo([drop.lat, drop.lng], 16, { duration: 1.5 });
       });
 
-      list.appendChild(item);
+      frag.appendChild(item);
     });
+
+    list.appendChild(frag);
+
+    if (myDrops.length > MY_BLOSSOMS_LIMIT) {
+      const more = document.createElement('div');
+      more.className = 'my-blossoms-more';
+      more.textContent = `Showing ${MY_BLOSSOMS_LIMIT} of ${myDrops.length} blossoms`;
+      list.appendChild(more);
+    }
   }
 
   // ===== Drops =====
@@ -212,7 +207,8 @@ const App = (() => {
         return;
       }
 
-      drops.forEach(drop => BlossomMap.addBlossom(drop, false));
+      // Batch add all markers at once (MarkerCluster handles chunked rendering)
+      BlossomMap.addBlossoms(drops);
       updateCounter();
       updateMyBlossomsBadge();
     } catch (err) {
@@ -228,14 +224,13 @@ const App = (() => {
     Petals.burst(40);
     updateCounter();
     updateMyBlossomsBadge();
-
-    // Show share modal after animation plays
     setTimeout(() => showShareModal(drop), 1200);
   }
 
   function updateCounter() {
     const counter = document.getElementById('drop-count');
-    counter.textContent = drops.length;
+    const count = drops.length;
+    counter.textContent = count >= 1000 ? (count / 1000).toFixed(1) + 'k' : count;
     counter.classList.add('bump');
     setTimeout(() => counter.classList.remove('bump'), 300);
   }
@@ -251,9 +246,7 @@ const App = (() => {
     }
   }
 
-  function getDrops() {
-    return drops;
-  }
+  function getDrops() { return drops; }
 
   function getShareUrl(drop, handle) {
     let text = `planted a pink trumpet tree on the map 🌸\n\n`;
@@ -262,7 +255,6 @@ const App = (() => {
     }
     text += `drop a photo, watch bangalore turn pink`;
 
-    // Share URL with image thumbnail via OG tags
     const filename = drop.imagePath.split('/').pop();
     const shareUrl = `${window.location.origin}/share?img=${encodeURIComponent(filename)}`;
 

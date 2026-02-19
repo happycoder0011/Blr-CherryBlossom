@@ -260,6 +260,13 @@ html, body {
   margin-bottom: 4px;
 }
 
+.my-blossoms-more {
+  text-align: center;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--pink-500);
+}
+
 /* Individual blossom items */
 .my-blossom-item {
   display: flex;
