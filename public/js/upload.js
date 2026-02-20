@@ -84,24 +84,13 @@ const Upload = (() => {
       let location = await extractEXIF(file);
 
       if (!location) {
-        showToast('No GPS data found. Please use a photo taken with location enabled.');
+        // No GPS — enter pin-drop mode so user can pick a spot on the map
+        showLoading(false);
+        enterPinDropMode(file);
         return;
       }
 
-      showLoading(true, 'Planting blossom...');
-      const drop = await saveDrop(file, location);
-
-      if (drop && !drop.error) {
-        App.addDrop(drop);
-        if (drop._unsaved) {
-          showToast(`Blossom planted at ${drop.locationName}! (may not persist — storage hiccup)`);
-        } else {
-          showToast(`Blossom planted at ${drop.locationName}!`);
-        }
-      } else {
-        const msg = drop?.error || 'Upload failed. Please try again.';
-        showToast(msg);
-      }
+      await uploadWithLocation(file, location);
     } catch (err) {
       console.error('Error processing file:', err);
       if (err.name === 'AbortError') {
@@ -112,6 +101,89 @@ const Upload = (() => {
     } finally {
       showLoading(false);
     }
+  }
+
+  async function uploadWithLocation(file, location) {
+    showLoading(true, 'Planting blossom...');
+    const drop = await saveDrop(file, location);
+
+    if (drop && !drop.error) {
+      App.addDrop(drop);
+      if (drop._unsaved) {
+        showToast(`Blossom planted at ${drop.locationName}! (may not persist — storage hiccup)`);
+      } else {
+        showToast(`Blossom planted at ${drop.locationName}!`);
+      }
+    } else {
+      const msg = drop?.error || 'Upload failed. Please try again.';
+      showToast(msg);
+    }
+    showLoading(false);
+  }
+
+  // ===== Pin Drop Mode =====
+  let pendingFile = null;
+  let pinDropEscHandler = null;
+
+  function enterPinDropMode(file) {
+    pendingFile = file;
+
+    // Show thumbnail preview in banner
+    const banner = document.getElementById('pin-drop-banner');
+    const thumb = document.getElementById('pin-drop-thumb');
+    thumb.src = URL.createObjectURL(file);
+    banner.classList.remove('hidden');
+
+    // Cancel button
+    document.getElementById('pin-drop-cancel').onclick = cancelPinDrop;
+
+    // Escape key to cancel
+    pinDropEscHandler = (e) => {
+      if (e.key === 'Escape') cancelPinDrop();
+    };
+    document.addEventListener('keydown', pinDropEscHandler);
+
+    // Tell the map to listen for a click
+    BlossomMap.enterPinDropMode(onPinSelected, cancelPinDrop);
+  }
+
+  async function onPinSelected(latlng) {
+    cleanupPinDrop();
+    const file = pendingFile;
+    pendingFile = null;
+
+    if (!file) return;
+
+    try {
+      showLoading(true, 'Looking up area...');
+      const locationName = await reverseGeocode(latlng.lat, latlng.lng);
+      await uploadWithLocation(file, {
+        lat: latlng.lat,
+        lng: latlng.lng,
+        locationName
+      });
+    } catch (err) {
+      console.error('Pin drop upload error:', err);
+      showToast('Something went wrong. Please try again.');
+      showLoading(false);
+    }
+  }
+
+  function cancelPinDrop() {
+    cleanupPinDrop();
+    pendingFile = null;
+    BlossomMap.exitPinDropMode();
+    showToast('Upload cancelled.');
+  }
+
+  function cleanupPinDrop() {
+    document.getElementById('pin-drop-banner').classList.add('hidden');
+    if (pinDropEscHandler) {
+      document.removeEventListener('keydown', pinDropEscHandler);
+      pinDropEscHandler = null;
+    }
+    const thumb = document.getElementById('pin-drop-thumb');
+    if (thumb.src.startsWith('blob:')) URL.revokeObjectURL(thumb.src);
   }
 
   async function extractEXIF(file) {

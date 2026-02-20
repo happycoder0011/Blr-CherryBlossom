@@ -129,8 +129,30 @@ const BlossomMap = (() => {
     return marker;
   }
 
+  // ===== Pin Drop Mode =====
+  let pinDropClickHandler = null;
+
+  function enterPinDropMode(onSelect, onCancel) {
+    document.getElementById('map').classList.add('pin-drop-mode');
+
+    pinDropClickHandler = (e) => {
+      exitPinDropMode();
+      onSelect({ lat: e.latlng.lat, lng: e.latlng.lng });
+    };
+
+    map.once('click', pinDropClickHandler);
+  }
+
+  function exitPinDropMode() {
+    document.getElementById('map').classList.remove('pin-drop-mode');
+    if (pinDropClickHandler) {
+      map.off('click', pinDropClickHandler);
+      pinDropClickHandler = null;
+    }
+  }
+
   function getMap() { return map; }
   function getClusterGroup() { return clusterGroup; }
 
-  return { init, addBlossom, addBlossoms, getMap, getClusterGroup };
+  return { init, addBlossom, addBlossoms, getMap, getClusterGroup, enterPinDropMode, exitPinDropMode };
 })();

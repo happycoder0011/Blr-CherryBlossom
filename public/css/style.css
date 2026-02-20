@@ -910,6 +910,77 @@ html, body {
   background: rgba(255, 255, 255, 0.08);
 }
 
+/* ===== Pin Drop Mode ===== */
+#pin-drop-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1500;
+  display: flex;
+  justify-content: center;
+  padding: 14px 20px;
+  background: rgba(26, 10, 18, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(244, 114, 182, 0.25);
+  animation: bannerSlideIn 0.3s ease;
+}
+
+#pin-drop-banner.hidden {
+  display: none;
+}
+
+@keyframes bannerSlideIn {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.pin-drop-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 500px;
+  width: 100%;
+}
+
+.pin-drop-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(244, 114, 182, 0.3);
+  flex-shrink: 0;
+}
+
+.pin-drop-inner p {
+  flex: 1;
+  color: var(--pink-200);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#pin-drop-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(244, 114, 182, 0.2);
+  color: var(--pink-400);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+  flex-shrink: 0;
+}
+
+#pin-drop-cancel:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pink-300);
+}
+
+#map.pin-drop-mode {
+  cursor: crosshair;
+}
+
 /* ===== Loading ===== */
 #loading {
   position: fixed;
