@@ -5,7 +5,7 @@ export async function onRequestGet(context) {
   const img = url.searchParams.get('img');
 
   const origin = url.origin;
-  const imageUrl = img ? `${origin}/uploads/${img}` : '';
+  const imageUrl = img ? `${origin}/uploads/${img}` : `${origin}/og-image`;
   const siteUrl = origin;
 
   const html = `<!DOCTYPE html>
@@ -16,11 +16,11 @@ export async function onRequestGet(context) {
   <meta property="og:description" content="drop a photo, plant a pink trumpet blossom, watch bangalore turn pink 🌸">
   <meta property="og:type" content="website">
   <meta property="og:url" content="${siteUrl}">
-  ${imageUrl ? `<meta property="og:image" content="${imageUrl}">` : ''}
+  <meta property="og:image" content="${imageUrl}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="BLR Pink Trumpet Blossom">
   <meta name="twitter:description" content="drop a photo, plant a pink trumpet blossom, watch bangalore turn pink 🌸">
-  ${imageUrl ? `<meta name="twitter:image" content="${imageUrl}">` : ''}
+  <meta name="twitter:image" content="${imageUrl}">
   <meta http-equiv="refresh" content="0;url=${siteUrl}">
   <title>BLR Pink Trumpet Blossom</title>
 </head>
